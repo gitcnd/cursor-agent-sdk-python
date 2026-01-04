@@ -2,6 +2,7 @@
 
 import json
 import os
+import platform
 import shutil
 from collections.abc import AsyncIterator
 from contextlib import suppress
@@ -28,6 +29,9 @@ from .types import (
 
 _DEFAULT_MAX_BUFFER_SIZE = 1024 * 1024  # 1MB buffer limit
 
+# Default Windows cursor-agent location (community-patched Node.js version)
+_DEFAULT_WINDOWS_CURSOR_AGENT_JS = Path.home() / "Downloads" / "cursor" / "vibe" / "cursor_agent_mod" / "2026.01.02-80e4d9b-windows" / "index.js"
+
 
 class SubprocessCLITransport:
     """Subprocess transport using cursor-agent CLI."""
@@ -39,9 +43,8 @@ class SubprocessCLITransport:
     ):
         self._prompt = prompt
         self._options = options
-        self._cli_path = (
-            str(options.cli_path) if options.cli_path is not None else self._find_cli()
-        )
+        self._is_windows = platform.system() == "Windows"
+        self._cli_path, self._is_node_js = self._find_cli(options.cli_path)
         self._cwd = str(options.cwd) if options.cwd else None
         self._process: Process | None = None
         self._stdout_stream: TextReceiveStream | None = None
@@ -54,37 +57,89 @@ class SubprocessCLITransport:
             else _DEFAULT_MAX_BUFFER_SIZE
         )
 
-    def _find_cli(self) -> str:
-        """Find cursor-agent CLI binary."""
-        # Check PATH first
+    def _find_cli(self, cli_path_override: str | Path | None = None) -> tuple[str, bool]:
+        """Find cursor-agent CLI binary or Node.js script.
+        
+        Returns:
+            Tuple of (path, is_node_js) where is_node_js indicates if we need to run via node.
+        """
+        # If user provided a path, use it
+        if cli_path_override:
+            path_str = str(cli_path_override)
+            # Check if it's a .js file (needs node to run)
+            is_js = path_str.endswith(".js")
+            return (path_str, is_js)
+
+        # Check PATH first for cursor-agent binary/script
         if cli := shutil.which("cursor-agent"):
-            return cli
+            return (cli, False)
 
-        # Common installation locations
-        locations = [
-            Path.home() / ".local" / "bin" / "cursor-agent",
-            Path("/usr/local/bin/cursor-agent"),
-            Path.home() / ".cursor" / "bin" / "cursor-agent",
-        ]
+        # Platform-specific locations
+        if self._is_windows:
+            # Windows: Look for the community-patched Node.js version
+            windows_locations = [
+                _DEFAULT_WINDOWS_CURSOR_AGENT_JS,
+                Path.home() / "cursor-agent" / "index.js",
+                Path("C:/cursor-agent/index.js"),
+            ]
+            
+            for path in windows_locations:
+                if path.exists() and path.is_file():
+                    return (str(path), True)  # Node.js script
+            
+            # Also check for .cmd wrapper
+            if cmd := shutil.which("cursor-agent.cmd"):
+                return (cmd, False)
+                
+            raise CLINotFoundError(
+                "cursor-agent not found on Windows.\n\n"
+                "Option 1: Use the community-patched Windows version:\n"
+                "  Download from: https://github.com/gitcnd/cursor-agent-cli-windows\n"
+                f"  Expected at: {_DEFAULT_WINDOWS_CURSOR_AGENT_JS}\n\n"
+                "Option 2: Provide the path via CursorAgentOptions:\n"
+                "  CursorAgentOptions(cli_path='C:/path/to/index.js')\n"
+            )
+        else:
+            # Linux/macOS: Look for native binary
+            unix_locations = [
+                Path.home() / ".local" / "bin" / "cursor-agent",
+                Path("/usr/local/bin/cursor-agent"),
+                Path.home() / ".cursor" / "bin" / "cursor-agent",
+            ]
 
-        for path in locations:
-            if path.exists() and path.is_file():
-                return str(path)
+            for path in unix_locations:
+                if path.exists() and path.is_file():
+                    return (str(path), False)
 
-        raise CLINotFoundError(
-            "cursor-agent not found. Install with:\n"
-            "  curl https://cursor.com/install -fsS | bash\n"
-            "\nOr provide the path via CursorAgentOptions:\n"
-            "  CursorAgentOptions(cli_path='/path/to/cursor-agent')"
-        )
+            raise CLINotFoundError(
+                "cursor-agent not found. Install with:\n"
+                "  curl https://cursor.com/install -fsS | bash\n"
+                "\nOr provide the path via CursorAgentOptions:\n"
+                "  CursorAgentOptions(cli_path='/path/to/cursor-agent')"
+            )
 
     def _build_command(self) -> list[str]:
         """Build CLI command with arguments."""
-        cmd = [
-            self._cli_path,
+        # For Node.js scripts (Windows community patch), we need to run via node
+        if self._is_node_js:
+            # Find node executable
+            node_path = shutil.which("node")
+            if not node_path:
+                raise CLINotFoundError(
+                    "Node.js is required to run cursor-agent on Windows.\n"
+                    "Install from: https://nodejs.org/\n"
+                    "Or use: winget install OpenJS.NodeJS.LTS"
+                )
+            # Use --use-system-ca for proper SSL certificate handling
+            cmd = [node_path, "--use-system-ca", self._cli_path]
+        else:
+            cmd = [self._cli_path]
+
+        # Add common arguments
+        cmd.extend([
             "--print",
             "--output-format", "stream-json",
-        ]
+        ])
 
         # Model selection
         if self._options.model:
