@@ -1,0 +1,15 @@
+# octal file mode, owner, group, mtime, atime, spare1, spare2, filename	# https://github.com/gitcnd/git-meta.git v0.20250918
+# last:(1000:cnd,1000:cnd) Chris <cryptophoto@gmail.com> at 2026-01-04 22:02:31 +1000
+0777,cnd,cnd,2026-01-04 21:16:45.91087 +1000,2026-01-04 21:16:45.91087 +1000,,,LICENSE
+0777,cnd,cnd,2026-01-04 21:54:11.10781 +1000,2026-01-04 21:54:11.10781 +1000,,,README.md
+0777,cnd,cnd,2026-01-04 21:16:23.33863 +1000,2026-01-04 21:16:23.33863 +1000,,,examples/file_editing.py
+0777,cnd,cnd,2026-01-04 21:16:15.7663 +1000,2026-01-04 21:16:15.7663 +1000,,,examples/quick_start.py
+0777,cnd,cnd,2026-01-04 21:26:39.37183 +1000,2026-01-04 21:26:39.37183 +1000,,,examples/test_tools_and_mcp.py
+0777,cnd,cnd,2026-01-04 21:54:20.32083 +1000,2026-01-04 21:54:20.32083 +1000,,,pyproject.toml
+0777,cnd,cnd,2026-01-04 21:13:43.08555 +1000,2026-01-04 21:13:43.08555 +1000,,,src/cursor_agent_sdk/__init__.py
+0777,cnd,cnd,2026-01-04 21:13:48.5287 +1000,2026-01-04 21:13:48.5287 +1000,,,src/cursor_agent_sdk/_errors.py
+0777,cnd,cnd,2026-01-04 21:13:44.68228 +1000,2026-01-04 21:13:44.68228 +1000,,,src/cursor_agent_sdk/_version.py
+0777,cnd,cnd,2026-01-04 21:14:16.09568 +1000,2026-01-04 21:14:16.09568 +1000,,,src/cursor_agent_sdk/query.py
+0777,cnd,cnd,2026-01-04 21:27:24.70908 +1000,2026-01-04 21:27:24.70908 +1000,,,src/cursor_agent_sdk/transport.py
+0777,cnd,cnd,2026-01-04 21:27:35.01721 +1000,2026-01-04 21:27:35.01721 +1000,,,src/cursor_agent_sdk/types.py
+0777,cnd,cnd,2026-01-04 21:28:26.68449 +1000,2026-01-04 21:28:26.68449 +1000,,,tests/test_types.py
